@@ -19,17 +19,17 @@ class Prey extends Organism {
         super(x, y, 8);
     }
 
-    void move() {
-        updateMovement();
-        updateHealth();
+    void move(ArrayList<Organism> orgs) {
+        updateMovement(orgs);
+        updateHealth(orgs);
         wrapAround();
     }
 
-    void updateMovement() {
+    void updateMovement(ArrayList<Organism> orgs) {
         
         PVector targetDirection = findTargetDirection();
         
-        if(checkInLight()){
+        if(checkInLight(orgs)){
             
             if(targetDirection != null){
 
@@ -84,7 +84,7 @@ class Prey extends Organism {
         return closestFood;
     }
 
-    void updateHealth() {
+    void updateHealth(ArrayList<Organism> organisms) {
         float currentTime = millis();
 
         float x = this.position.x;
@@ -93,15 +93,18 @@ class Prey extends Organism {
         boolean inLight = false;
 
         // Check if the random position is within any shroom's light radius
-        for (Shroom shroom : glowshrooms) {
-            float distance = dist(x, y, shroom.position.x, shroom.position.y);
-            if (distance < shroom._lightRadius) {
-                inLight = true;
-                break;
+        for (Organism org : organisms) {
+            if (org instanceof Shroom) {
+                Shroom shroom = (Shroom) org;
+                float distance = dist(x, y, shroom.position.x, shroom.position.y);
+                if (distance < shroom._lightRadius) {
+                    inLight = true;
+                    break;
+                }
             }
         }
 
-        if(!inLight){
+        if (!inLight) {
             if (currentTime - lastHealthUpdateTime > 1000) {
                 health -= healthDecayRate;
                 lastHealthUpdateTime = currentTime;
@@ -123,17 +126,17 @@ class Prey extends Organism {
         lastEatTime = millis();
     }
 
-    void checkReproduction(float currentTime) {
+    void checkReproduction(float currentTime, ArrayList<Organism> orgs) {
         if (foodEaten > 1 && currentTime - lastEatTime <= reproductionThreshold) {
-            reproduce();
+            reproduce(orgs);
             foodEaten = 0;
         } else if (currentTime - lastEatTime > reproductionThreshold) {
             foodEaten = 0;
         }
     }
 
-    void reproduce() {
-        prey.add(new Prey(position.x + random(-10, 10), position.y + random(-10, 10)));
+    void reproduce(ArrayList<Organism> orgs) {
+        orgs.add(new Prey(position.x + random(-10, 10), position.y + random(-10, 10)));
     }
 
     void display() {
@@ -141,21 +144,19 @@ class Prey extends Organism {
         ellipse(position.x, position.y, radius * 2, radius * 2);
     }
 
-    boolean checkInLight(){
+    boolean checkInLight(ArrayList<Organism> orgs) {
         float x = this.position.x;
         float y = this.position.y;
 
-        // Check if the random position is within any shroom's light radius
-        for (Shroom shroom : glowshrooms) {
-            float distance = dist(x, y, shroom.position.x, shroom.position.y);
-            if (distance < shroom._lightRadius) {
-                return true;
+        for (Organism org : orgs) {
+            if (org instanceof Shroom) {
+                Shroom shroom = (Shroom) org;
+                float distance = dist(x, y, shroom.position.x, shroom.position.y);
+                if (distance < shroom._lightRadius) {
+                    return true;
+                }
             }
         }
-
         return false;
-
     }
-
-
 }

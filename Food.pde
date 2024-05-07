@@ -10,7 +10,7 @@ class Food extends Organism{
         ellipse(position.x, position.y, radius * 2, radius * 2); // Draw food as a small circle
     }
 
-    void move(){
+    void move(ArrayList<Organism> orgs){
 
     }
 

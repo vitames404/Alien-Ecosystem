@@ -1,8 +1,7 @@
 // Ecosystem project
-ArrayList<Shroom> glowshrooms;
-ArrayList<Prey> prey;
+
+ArrayList<Organism> organisms;
 ArrayList<Food> foodItems;
-ArrayList<Predator> predators;
 
 int availableMinerals = 100;
 int initialCount = 12;
@@ -23,19 +22,18 @@ void setup() {
 }
 
 void initializeEntities() {
-    predators = new ArrayList<Predator>();
+
+    organisms = new ArrayList<Organism>();
     foodItems = new ArrayList<Food>();
-    prey = new ArrayList<Prey>();
-    glowshrooms = new ArrayList<Shroom>();
 
     for (int i = 0; i < initialCount; i++) {
-        prey.add(new Prey(random(width), random(height)));
+        organisms.add(new Prey(random(width), random(height)));
     }
     for (int i = 0; i < 1; i++) {
-        predators.add(new Predator(random(width), random(height)));
+        organisms.add(new Predator(random(width), random(height)));
     }
     for (int i = 0; i < initialShroom; i++) {
-        glowshrooms.add(new Shroom(random(width), random(height), random(50, 150)));
+        organisms.add(new Shroom(random(width), random(height), random(50, 150)));
     }
 }
 
@@ -63,58 +61,92 @@ void updateWorld() {
 
 void displayEntities() {
     for (Food food : foodItems) food.display();
-    for (Shroom shroom : glowshrooms) shroom.display();
-    for (Predator predator : predators) predator.display();
-    for (Prey p : prey) p.display();
+    for (Organism org : organisms) org.display();
 }
 
 void updatePrey(long currentTime) {
-    for (int i = 0; i < prey.size(); i++) {
-        Prey p = prey.get(i);
-        p.move();
-        checkCollisionsWithFood(p);
-        p.checkReproduction(currentTime);
-        if (p.health <= 0) {
-            prey.remove(i--);
+    for (int i = 0; i < organisms.size(); i++) {
+       
+        Organism org = organisms.get(i);
+
+        if(org instanceof Prey){
+
+            Prey p = (Prey) org;         
+        
+            p.move(organisms);
+            checkCollisionsWithFood(p);
+            p.checkReproduction(currentTime, organisms);
+            
+            if (p.health <= 0) {
+                organisms.remove(i--);
+            }
         }
     }
 }
 
-void updateShroom(long currentTime){
-    for(int i = 0; i < glowshrooms.size(); i++){
-        Shroom s = glowshrooms.get(i);
-
-        int preyQuantity = s.checkPreysInArea(prey);
-
-        s.updateHealth(preyQuantity);
-
-        if(s._health <= 0){
-            glowshrooms.remove(s);
+void updateShroom(long currentTime) {
+    
+    for (int i = 0; i < organisms.size(); i++) {
+        
+        Organism org = organisms.get(i);
+        
+        if (org instanceof Shroom) {
+            
+            Shroom s = (Shroom) org;
+            
+            int preyQuantity = 0;
+            
+            for (Organism otherOrg : organisms) {
+                
+                if (otherOrg instanceof Prey) {
+                
+                    preyQuantity += s.checkPreysInArea((Prey) otherOrg);
+                
+                }
+            
+            }
+            
+            s.updateHealth(preyQuantity);
+            
+            if (s._health <= 0) {
+                organisms.remove(s);
+            }
         }
-
     }
 }
 
 void updatePredators(long currentTime) {
 
-    for(int i = 0; i < predators.size(); i++){
-        Predator p = predators.get(i);
-        p.checkReproduction(currentTime);
-        p.move();
-        checkPredatorCollisions(p);
-        if(p.health <= 0){
-            predators.remove(p);
+    for(int i = 0; i < organisms.size(); i++){
+        
+        Organism org = organisms.get(i);
+
+        if(org instanceof Predator){
+
+            Predator p = (Predator) org;
+
+            p.checkReproduction(currentTime);
+            p.move(organisms);
+            checkPredatorCollisions(p);
+
+            if(p.health <= 0){
+                organisms.remove(p);
+            }
+        
         }
     }
 }
 
 void checkPredatorCollisions(Predator predator) {
-    if(!predator.pregnant){
-        for (int i = 0; i < prey.size(); i++) {
-            if (checkCollision(prey.get(i), predator)) {
-                predator.eat();
-                prey.remove(i--);
-                predator.targetPrey = null;
+    if (!predator.pregnant) {
+        for (int i = 0; i < organisms.size(); i++) {
+            Organism org = organisms.get(i);
+            if (org instanceof Prey && checkCollision(org, predator)) {
+                if(predator.hunting && predator.targetPrey == org){
+                    predator.eat();
+                    organisms.remove(i--);
+                    predator.targetPrey = null;
+                }
             }
         }
     }
@@ -132,11 +164,14 @@ void spawnFood() {
     boolean inLight = false;
 
     // Check if the random position is within any shroom's light radius
-    for (Shroom shroom : glowshrooms) {
-        float distance = dist(x, y, shroom.position.x, shroom.position.y);
-        if (distance < shroom._lightRadius) {
-            inLight = true;
-            break;
+    for (Organism org : organisms) {
+        if(org instanceof Shroom){
+            Shroom shroom = (Shroom) org;
+            float distance = dist(x, y, shroom.position.x, shroom.position.y);
+            if (distance < shroom._lightRadius) {
+                inLight = true;
+                break;
+            }
         }
     }
 
@@ -147,7 +182,17 @@ void spawnFood() {
 }
 
 void spawnShroom(long currentTime) {
-    if (availableMinerals > glowshrooms.size() * 10) {
+
+    int  shroomQuantity = 0;
+
+    for (Organism org : organisms) {
+        // Verifica se o organismo é um Shroom
+        if (org instanceof Shroom) {
+            shroomQuantity++;
+        }
+    }
+
+    if (availableMinerals > shroomQuantity * 10) {
         float x = random(width);
         float y = random(height);
 
@@ -156,7 +201,7 @@ void spawnShroom(long currentTime) {
         if (y < 0) y = 0;
         if (y > height) y = height;
 
-        glowshrooms.add(new Shroom(x, y, random(50, 150)));
+        organisms.add(new Shroom(x, y, random(50, 150)));
     }
 }
 
@@ -174,13 +219,24 @@ void checkCollisionsWithFood(Prey p) {
     }
 }
 
-void checkIfFinished(){
-
+void checkIfFinished() {
     long currentTime = millis();
 
-    if(predators.size() < 1 || prey.size() <  1){
+    int predatorsCount = 0;
+    int preyCount = 0;
+
+    // Conta o número de predadores e presas na lista de organismos
+    for (Organism org : organisms) {
+        if (org instanceof Prey) {
+            preyCount++;
+        } else if (org instanceof Predator) {
+            predatorsCount++;
+        }
+    }
+
+    // Verifica se não há predadores ou presas restantes
+    if (predatorsCount < 1 || preyCount < 1) {
         println(((currentTime - timer) / 1000) / 60);
         exit();
     }
 }
-

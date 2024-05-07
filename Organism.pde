@@ -1,13 +1,13 @@
 abstract class Organism {
-    PVector position;
-    float radius;
+    protected PVector position;
+    protected float radius;
 
     Organism(float x, float y, float r) {
         position = new PVector(x, y);
         radius = r;
     }
 
-    abstract void move();
+    abstract void move(ArrayList<Organism> orgs);
     abstract void display();
 
     void wrapAround() {

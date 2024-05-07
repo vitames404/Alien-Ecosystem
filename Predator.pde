@@ -14,6 +14,8 @@ class Predator extends Organism {
     float lastEatTime = 0;
     float reproductionThreshold = 10000;
 
+    boolean hunting = false;
+
     // Adicionando atributos para a direção aleatória e controle de tempo
     PVector randomDirection = PVector.random2D();
     int directionChangeInterval = 2000; // tempo em milissegundos para mudar de direção
@@ -23,8 +25,9 @@ class Predator extends Organism {
         super(x, y, 20);
     }
 
-    void move() {
-        findClosestPrey();
+    void move(ArrayList<Organism> orgs) {
+
+        findClosestPrey(orgs);
         PVector closestCorner = findClosestCorner(); // Declare e atribua a variável closestCorner
 
         if(pregnant){
@@ -37,13 +40,14 @@ class Predator extends Organism {
 
                 if(PVector.dist(position, closestCorner) < 10)
                 {
-                    reproduce();
+                    reproduce(orgs);
                     pregnant = false;
                 }
             }
         }
         else{
             if (targetPrey != null) {
+                hunting = true;
                 PVector directionToPrey = PVector.sub(targetPrey.position, position);
                 directionToPrey.normalize();
                 directionToPrey.mult(speed);
@@ -52,7 +56,7 @@ class Predator extends Organism {
                 if (PVector.dist(position, targetPrey.position) < 10) { // Assumindo um raio de "comer"
                     // Adicione lógica aqui para remover a presa da lista
                     targetPrey = null; // Limpa o alvo após comer
-                    findClosestPrey(); // Procura por nova presa imediatamente
+                    findClosestPrey(orgs); // Procura por nova presa imediatamente
                 }
             } else {
                 long currentTime = millis();
@@ -103,27 +107,33 @@ class Predator extends Organism {
         popMatrix();
     }
 
-    public void findClosestPrey() {
+    public void findClosestPrey(ArrayList<Organism> orgs) {
+        
         float minDistance = Float.MAX_VALUE;
+        
         int counter = 0;
         Prey currentPrey = null;
         float distance = 0;
 
-        for (Prey p : prey) {
-            distance = PVector.dist(position, p.position);
-            if (distance < detectionRadius && distance < minDistance) {
-                currentPrey = p;
-                counter++;        
+        for (Organism o : organisms) {
+            if (o instanceof Prey) {
+                Prey p = (Prey) o;
+                distance = PVector.dist(position, p.position);
+                if (distance < detectionRadius && distance < minDistance) {
+                    currentPrey = p;
+                    counter++;        
+                }
             }
         }
 
-        if(counter == 1 && currentPrey != null){
+        if(counter <= 3 && currentPrey != null){
             minDistance = distance;
             targetPrey = currentPrey;
         }
         else
         {
             targetPrey = null;
+            hunting = false;
         }
     }
 
@@ -142,8 +152,8 @@ class Predator extends Organism {
         } 
     }
 
-    void reproduce() {
-        predators.add(new Predator(position.x + random(-10, 10), position.y + random(-10, 10)));
+    void reproduce(ArrayList<Organism> orgs) {
+        orgs.add(new Predator(position.x + random(-10, 10), position.y + random(-10, 10)));
     }
 
     PVector findClosestCorner(){

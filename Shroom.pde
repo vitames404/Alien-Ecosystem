@@ -14,7 +14,7 @@ class Shroom extends Organism {
     }
 
     @Override
-    void move() {
+    void move(ArrayList<Organism> orgs) {
 
     }
 
@@ -39,20 +39,17 @@ class Shroom extends Organism {
         }
     }
 
-    int checkPreysInArea(ArrayList<Prey> preys){
+    int checkPreysInArea(Prey preys){
     
         int counter = 0;
 
-        for(Prey p : preys){
+        float distance = dist(preys.position.x, preys.position.y, this.position.x, this.position.y);
 
-            float distance = dist(p.position.x, p.position.y, this.position.x, this.position.y);
+        if(distance < this._lightRadius){
+            counter++;
+        }
 
-            if(distance < this._lightRadius){
-                counter++;
-            }
-      }
-
-    return counter;
+        return counter;
 
     }
 

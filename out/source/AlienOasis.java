@@ -16,10 +16,9 @@ import java.io.IOException;
 public class AlienOasis extends PApplet {
 
 // Ecosystem project
-ArrayList<Shroom> glowshrooms;
-ArrayList<Prey> prey;
+
+ArrayList<Organism> organisms;
 ArrayList<Food> foodItems;
-ArrayList<Predator> predators;
 
 int availableMinerals = 100;
 int initialCount = 12;
@@ -40,19 +39,18 @@ public void setup() {
 }
 
 public void initializeEntities() {
-    predators = new ArrayList<Predator>();
+
+    organisms = new ArrayList<Organism>();
     foodItems = new ArrayList<Food>();
-    prey = new ArrayList<Prey>();
-    glowshrooms = new ArrayList<Shroom>();
 
     for (int i = 0; i < initialCount; i++) {
-        prey.add(new Prey(random(width), random(height)));
+        organisms.add(new Prey(random(width), random(height)));
     }
     for (int i = 0; i < 1; i++) {
-        predators.add(new Predator(random(width), random(height)));
+        organisms.add(new Predator(random(width), random(height)));
     }
     for (int i = 0; i < initialShroom; i++) {
-        glowshrooms.add(new Shroom(random(width), random(height), random(50, 150)));
+        organisms.add(new Shroom(random(width), random(height), random(50, 150)));
     }
 }
 
@@ -80,58 +78,92 @@ public void updateWorld() {
 
 public void displayEntities() {
     for (Food food : foodItems) food.display();
-    for (Shroom shroom : glowshrooms) shroom.display();
-    for (Predator predator : predators) predator.display();
-    for (Prey p : prey) p.display();
+    for (Organism org : organisms) org.display();
 }
 
 public void updatePrey(long currentTime) {
-    for (int i = 0; i < prey.size(); i++) {
-        Prey p = prey.get(i);
-        p.move();
-        checkCollisionsWithFood(p);
-        p.checkReproduction(currentTime);
-        if (p.health <= 0) {
-            prey.remove(i--);
+    for (int i = 0; i < organisms.size(); i++) {
+       
+        Organism org = organisms.get(i);
+
+        if(org instanceof Prey){
+
+            Prey p = (Prey) org;         
+        
+            p.move(organisms);
+            checkCollisionsWithFood(p);
+            p.checkReproduction(currentTime, organisms);
+            
+            if (p.health <= 0) {
+                organisms.remove(i--);
+            }
         }
     }
 }
 
-public void updateShroom(long currentTime){
-    for(int i = 0; i < glowshrooms.size(); i++){
-        Shroom s = glowshrooms.get(i);
-
-        int preyQuantity = s.checkPreysInArea(prey);
-
-        s.updateHealth(preyQuantity);
-
-        if(s._health <= 0){
-            glowshrooms.remove(s);
+public void updateShroom(long currentTime) {
+    
+    for (int i = 0; i < organisms.size(); i++) {
+        
+        Organism org = organisms.get(i);
+        
+        if (org instanceof Shroom) {
+            
+            Shroom s = (Shroom) org;
+            
+            int preyQuantity = 0;
+            
+            for (Organism otherOrg : organisms) {
+                
+                if (otherOrg instanceof Prey) {
+                
+                    preyQuantity += s.checkPreysInArea((Prey) otherOrg);
+                
+                }
+            
+            }
+            
+            s.updateHealth(preyQuantity);
+            
+            if (s._health <= 0) {
+                organisms.remove(s);
+            }
         }
-
     }
 }
 
 public void updatePredators(long currentTime) {
 
-    for(int i = 0; i < predators.size(); i++){
-        Predator p = predators.get(i);
-        p.checkReproduction(currentTime);
-        p.move();
-        checkPredatorCollisions(p);
-        if(p.health <= 0){
-            predators.remove(p);
+    for(int i = 0; i < organisms.size(); i++){
+        
+        Organism org = organisms.get(i);
+
+        if(org instanceof Predator){
+
+            Predator p = (Predator) org;
+
+            p.checkReproduction(currentTime);
+            p.move(organisms);
+            checkPredatorCollisions(p);
+
+            if(p.health <= 0){
+                organisms.remove(p);
+            }
+        
         }
     }
 }
 
 public void checkPredatorCollisions(Predator predator) {
-    if(!predator.pregnant){
-        for (int i = 0; i < prey.size(); i++) {
-            if (checkCollision(prey.get(i), predator)) {
-                predator.eat();
-                prey.remove(i--);
-                predator.targetPrey = null;
+    if (!predator.pregnant) {
+        for (int i = 0; i < organisms.size(); i++) {
+            Organism org = organisms.get(i);
+            if (org instanceof Prey && checkCollision(org, predator)) {
+                if(predator.hunting && predator.targetPrey == org){
+                    predator.eat();
+                    organisms.remove(i--);
+                    predator.targetPrey = null;
+                }
             }
         }
     }
@@ -149,11 +181,14 @@ public void spawnFood() {
     boolean inLight = false;
 
     // Check if the random position is within any shroom's light radius
-    for (Shroom shroom : glowshrooms) {
-        float distance = dist(x, y, shroom.position.x, shroom.position.y);
-        if (distance < shroom._lightRadius) {
-            inLight = true;
-            break;
+    for (Organism org : organisms) {
+        if(org instanceof Shroom){
+            Shroom shroom = (Shroom) org;
+            float distance = dist(x, y, shroom.position.x, shroom.position.y);
+            if (distance < shroom._lightRadius) {
+                inLight = true;
+                break;
+            }
         }
     }
 
@@ -164,7 +199,17 @@ public void spawnFood() {
 }
 
 public void spawnShroom(long currentTime) {
-    if (availableMinerals > glowshrooms.size() * 10) {
+
+    int  shroomQuantity = 0;
+
+    for (Organism org : organisms) {
+        // Verifica se o organismo é um Shroom
+        if (org instanceof Shroom) {
+            shroomQuantity++;
+        }
+    }
+
+    if (availableMinerals > shroomQuantity * 10) {
         float x = random(width);
         float y = random(height);
 
@@ -173,7 +218,7 @@ public void spawnShroom(long currentTime) {
         if (y < 0) y = 0;
         if (y > height) y = height;
 
-        glowshrooms.add(new Shroom(x, y, random(50, 150)));
+        organisms.add(new Shroom(x, y, random(50, 150)));
     }
 }
 
@@ -191,16 +236,27 @@ public void checkCollisionsWithFood(Prey p) {
     }
 }
 
-public void checkIfFinished(){
-
+public void checkIfFinished() {
     long currentTime = millis();
 
-    if(predators.size() < 1 || prey.size() <  1){
+    int predatorsCount = 0;
+    int preyCount = 0;
+
+    // Conta o número de predadores e presas na lista de organismos
+    for (Organism org : organisms) {
+        if (org instanceof Prey) {
+            preyCount++;
+        } else if (org instanceof Predator) {
+            predatorsCount++;
+        }
+    }
+
+    // Verifica se não há predadores ou presas restantes
+    if (predatorsCount < 1 || preyCount < 1) {
         println(((currentTime - timer) / 1000) / 60);
         exit();
     }
 }
-
 class Food extends Organism{
 
     Food(float x, float y) {
@@ -213,21 +269,21 @@ class Food extends Organism{
         ellipse(position.x, position.y, radius * 2, radius * 2); // Draw food as a small circle
     }
 
-    public void move(){
+    public void move(ArrayList<Organism> orgs){
 
     }
 
 }
 abstract class Organism {
-    PVector position;
-    float radius;
+    protected PVector position;
+    protected float radius;
 
     Organism(float x, float y, float r) {
         position = new PVector(x, y);
         radius = r;
     }
 
-    public abstract void move();
+    public abstract void move(ArrayList<Organism> orgs);
     public abstract void display();
 
     public void wrapAround() {
@@ -253,6 +309,8 @@ class Predator extends Organism {
     float lastEatTime = 0;
     float reproductionThreshold = 10000;
 
+    boolean hunting = false;
+
     // Adicionando atributos para a direção aleatória e controle de tempo
     PVector randomDirection = PVector.random2D();
     int directionChangeInterval = 2000; // tempo em milissegundos para mudar de direção
@@ -262,8 +320,9 @@ class Predator extends Organism {
         super(x, y, 20);
     }
 
-    public void move() {
-        findClosestPrey();
+    public void move(ArrayList<Organism> orgs) {
+
+        findClosestPrey(orgs);
         PVector closestCorner = findClosestCorner(); // Declare e atribua a variável closestCorner
 
         if(pregnant){
@@ -276,13 +335,14 @@ class Predator extends Organism {
 
                 if(PVector.dist(position, closestCorner) < 10)
                 {
-                    reproduce();
+                    reproduce(orgs);
                     pregnant = false;
                 }
             }
         }
         else{
             if (targetPrey != null) {
+                hunting = true;
                 PVector directionToPrey = PVector.sub(targetPrey.position, position);
                 directionToPrey.normalize();
                 directionToPrey.mult(speed);
@@ -291,7 +351,7 @@ class Predator extends Organism {
                 if (PVector.dist(position, targetPrey.position) < 10) { // Assumindo um raio de "comer"
                     // Adicione lógica aqui para remover a presa da lista
                     targetPrey = null; // Limpa o alvo após comer
-                    findClosestPrey(); // Procura por nova presa imediatamente
+                    findClosestPrey(orgs); // Procura por nova presa imediatamente
                 }
             } else {
                 long currentTime = millis();
@@ -342,27 +402,33 @@ class Predator extends Organism {
         popMatrix();
     }
 
-    public void findClosestPrey() {
+    public void findClosestPrey(ArrayList<Organism> orgs) {
+        
         float minDistance = Float.MAX_VALUE;
+        
         int counter = 0;
         Prey currentPrey = null;
         float distance = 0;
 
-        for (Prey p : prey) {
-            distance = PVector.dist(position, p.position);
-            if (distance < detectionRadius && distance < minDistance) {
-                currentPrey = p;
-                counter++;        
+        for (Organism o : organisms) {
+            if (o instanceof Prey) {
+                Prey p = (Prey) o;
+                distance = PVector.dist(position, p.position);
+                if (distance < detectionRadius && distance < minDistance) {
+                    currentPrey = p;
+                    counter++;        
+                }
             }
         }
 
-        if(counter == 1 && currentPrey != null){
+        if(counter <= 3 && currentPrey != null){
             minDistance = distance;
             targetPrey = currentPrey;
         }
         else
         {
             targetPrey = null;
+            hunting = false;
         }
     }
 
@@ -381,8 +447,8 @@ class Predator extends Organism {
         } 
     }
 
-    public void reproduce() {
-        predators.add(new Predator(position.x + random(-10, 10), position.y + random(-10, 10)));
+    public void reproduce(ArrayList<Organism> orgs) {
+        orgs.add(new Predator(position.x + random(-10, 10), position.y + random(-10, 10)));
     }
 
     public PVector findClosestCorner(){
@@ -434,17 +500,17 @@ class Prey extends Organism {
         super(x, y, 8);
     }
 
-    public void move() {
-        updateMovement();
-        updateHealth();
+    public void move(ArrayList<Organism> orgs) {
+        updateMovement(orgs);
+        updateHealth(orgs);
         wrapAround();
     }
 
-    public void updateMovement() {
+    public void updateMovement(ArrayList<Organism> orgs) {
         
         PVector targetDirection = findTargetDirection();
         
-        if(checkInLight()){
+        if(checkInLight(orgs)){
             
             if(targetDirection != null){
 
@@ -499,7 +565,7 @@ class Prey extends Organism {
         return closestFood;
     }
 
-    public void updateHealth() {
+    public void updateHealth(ArrayList<Organism> organisms) {
         float currentTime = millis();
 
         float x = this.position.x;
@@ -508,15 +574,18 @@ class Prey extends Organism {
         boolean inLight = false;
 
         // Check if the random position is within any shroom's light radius
-        for (Shroom shroom : glowshrooms) {
-            float distance = dist(x, y, shroom.position.x, shroom.position.y);
-            if (distance < shroom._lightRadius) {
-                inLight = true;
-                break;
+        for (Organism org : organisms) {
+            if (org instanceof Shroom) {
+                Shroom shroom = (Shroom) org;
+                float distance = dist(x, y, shroom.position.x, shroom.position.y);
+                if (distance < shroom._lightRadius) {
+                    inLight = true;
+                    break;
+                }
             }
         }
 
-        if(!inLight){
+        if (!inLight) {
             if (currentTime - lastHealthUpdateTime > 1000) {
                 health -= healthDecayRate;
                 lastHealthUpdateTime = currentTime;
@@ -538,17 +607,17 @@ class Prey extends Organism {
         lastEatTime = millis();
     }
 
-    public void checkReproduction(float currentTime) {
+    public void checkReproduction(float currentTime, ArrayList<Organism> orgs) {
         if (foodEaten > 1 && currentTime - lastEatTime <= reproductionThreshold) {
-            reproduce();
+            reproduce(orgs);
             foodEaten = 0;
         } else if (currentTime - lastEatTime > reproductionThreshold) {
             foodEaten = 0;
         }
     }
 
-    public void reproduce() {
-        prey.add(new Prey(position.x + random(-10, 10), position.y + random(-10, 10)));
+    public void reproduce(ArrayList<Organism> orgs) {
+        orgs.add(new Prey(position.x + random(-10, 10), position.y + random(-10, 10)));
     }
 
     public void display() {
@@ -556,23 +625,21 @@ class Prey extends Organism {
         ellipse(position.x, position.y, radius * 2, radius * 2);
     }
 
-    public boolean checkInLight(){
+    public boolean checkInLight(ArrayList<Organism> orgs) {
         float x = this.position.x;
         float y = this.position.y;
 
-        // Check if the random position is within any shroom's light radius
-        for (Shroom shroom : glowshrooms) {
-            float distance = dist(x, y, shroom.position.x, shroom.position.y);
-            if (distance < shroom._lightRadius) {
-                return true;
+        for (Organism org : orgs) {
+            if (org instanceof Shroom) {
+                Shroom shroom = (Shroom) org;
+                float distance = dist(x, y, shroom.position.x, shroom.position.y);
+                if (distance < shroom._lightRadius) {
+                    return true;
+                }
             }
         }
-
         return false;
-
     }
-
-
 }
 // Shroom.pde
 class Shroom extends Organism { 
@@ -590,7 +657,7 @@ class Shroom extends Organism {
     }
 
     @Override public 
-    void move() {
+    void move(ArrayList<Organism> orgs) {
 
     }
 
@@ -615,20 +682,17 @@ class Shroom extends Organism {
         }
     }
 
-    public int checkPreysInArea(ArrayList<Prey> preys){
+    public int checkPreysInArea(Prey preys){
     
         int counter = 0;
 
-        for(Prey p : preys){
+        float distance = dist(preys.position.x, preys.position.y, this.position.x, this.position.y);
 
-            float distance = dist(p.position.x, p.position.y, this.position.x, this.position.y);
+        if(distance < this._lightRadius){
+            counter++;
+        }
 
-            if(distance < this._lightRadius){
-                counter++;
-            }
-      }
-
-    return counter;
+        return counter;
 
     }
 
