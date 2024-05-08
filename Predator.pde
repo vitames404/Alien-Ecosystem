@@ -16,13 +16,16 @@ class Predator extends Organism {
 
     boolean hunting = false;
 
+    PImage sprite;
+
     // Adicionando atributos para a direção aleatória e controle de tempo
     PVector randomDirection = PVector.random2D();
     int directionChangeInterval = 2000; // tempo em milissegundos para mudar de direção
     long lastDirectionChangeTime = 0; // para rastrear a última mudança de direção
 
-    Predator(float x, float y) {
+    Predator(float x, float y, PImage s) {
         super(x, y, 20);
+        sprite = s;
     }
 
     void move(ArrayList<Organism> orgs) {
@@ -79,19 +82,22 @@ class Predator extends Organism {
     }
 
     void display() {
-        fill(100, 100, 200, 15); // Cor de fundo semi-transparente para a área de detecção
-        ellipse(position.x, position.y, radius * 2, radius * 2); // Desenha a área de detecção
+        // Draw detection area
+        noFill(); // Disable filling
+        stroke(255, 0, 0); // Set ellipse border color to red
+        strokeWeight(1); // Set the thickness of the ellipse border
+        ellipse(position.x, position.y, detectionRadius * 2, detectionRadius * 2);
 
-        fill(255, 0, 0); // Cor vermelha para visibilidade
-
-        if(pregnant){
-            fill(255, 154, 154);
+        // Set fill color based on predator state
+        if (pregnant) {
+            fill(255, 154, 154); // Pregnant color
+        } else if (targetPrey != null) {
+            fill(151, 0, 0); // Target prey color
+        } else {
+            noFill(); // No fill color
         }
-        if(targetPrey != null){
-            fill(151, 0, 0);
-        }
 
-        // Determina o ângulo atual de movimento
+        // Calculate angle based on target direction or random direction
         float angle;
         if (targetPrey != null) {
             angle = atan2(targetPrey.position.y - position.y, targetPrey.position.x - position.x);
@@ -99,13 +105,15 @@ class Predator extends Organism {
             angle = atan2(randomDirection.y, randomDirection.x);
         }
 
-        // Aplica transformações para rotacionar e desenhar o triângulo na direção correta
+        // Apply transformations to rotate and draw the image in the correct direction
         pushMatrix();
         translate(position.x, position.y);
-        rotate(angle + HALF_PI); // Adiciona HALF_PI para ajustar a orientação do triângulo
-        triangle(0, -radius, -radius / 2, radius / 2, radius / 2, radius / 2);
+        rotate(angle); // Rotate the image to face the target direction
+        imageMode(CENTER); // Set image mode to center
+        image(sprite, 0, 0); // Draw the image at the translated and rotated position
         popMatrix();
     }
+
 
     public void findClosestPrey(ArrayList<Organism> orgs) {
         
@@ -126,7 +134,7 @@ class Predator extends Organism {
             }
         }
 
-        if(counter <= 3 && currentPrey != null){
+        if(counter <= 2 && currentPrey != null){
             minDistance = distance;
             targetPrey = currentPrey;
         }
@@ -153,7 +161,7 @@ class Predator extends Organism {
     }
 
     void reproduce(ArrayList<Organism> orgs) {
-        orgs.add(new Predator(position.x + random(-10, 10), position.y + random(-10, 10)));
+        orgs.add(new Predator(position.x + random(-10, 10), position.y + random(-10, 10), predatorSprite));
     }
 
     PVector findClosestCorner(){

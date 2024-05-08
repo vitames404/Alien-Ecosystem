@@ -6,14 +6,21 @@ ArrayList<Food> foodItems;
 int availableMinerals = 100;
 int initialCount = 12;
 int initialShroom = 8;
-int foodSpawnRate = 50;
+int foodSpawnRate = 200;
 int shroomSpawnRate = 50;
 long lastFoodSpawnTime = 0;
 long lastShroomSpawnTime = 0;
 
 long timer;
 
+PImage preySprite;
+PImage predatorSprite;
+
 void setup() {
+
+    preySprite = loadImage("assets/Sprite-0001.png");
+    predatorSprite = loadImage("assets/Sprite-0002.png");
+
     size(1280, 720);
     background(30);
     initializeEntities();
@@ -27,10 +34,10 @@ void initializeEntities() {
     foodItems = new ArrayList<Food>();
 
     for (int i = 0; i < initialCount; i++) {
-        organisms.add(new Prey(random(width), random(height)));
+        organisms.add(new Prey(random(width), random(height), preySprite));
     }
     for (int i = 0; i < 1; i++) {
-        organisms.add(new Predator(random(width), random(height)));
+        organisms.add(new Predator(random(width), random(height), predatorSprite));
     }
     for (int i = 0; i < initialShroom; i++) {
         organisms.add(new Shroom(random(width), random(height), random(50, 150)));
@@ -54,9 +61,9 @@ void updateWorld() {
         spawnShroom(currentTime);
         lastShroomSpawnTime = currentTime;
     }
+    updateShroom(currentTime);
     updatePrey(currentTime);
     updatePredators(currentTime);
-    updateShroom(currentTime);
 }
 
 void displayEntities() {

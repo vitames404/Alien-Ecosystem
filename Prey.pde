@@ -11,12 +11,15 @@ class Prey extends Organism {
     float detectionRadius = 150;  // Radius in which prey can detect food
     float reproductionThreshold = 10000;
 
+    PImage sprite;
+
     PVector randomDirection = PVector.random2D();
-    int directionChangeInterval = 2000; // tempo em milissegundos para mudar de direção
+    int directionChangeInterval = 1000; // tempo em milissegundos para mudar de direção
     long lastDirectionChangeTime = 0; 
 
-    Prey(float x, float y) {
+    Prey(float x, float y, PImage s) {
         super(x, y, 8);
+        sprite = s;
     }
 
     void move(ArrayList<Organism> orgs) {
@@ -127,7 +130,7 @@ class Prey extends Organism {
     }
 
     void checkReproduction(float currentTime, ArrayList<Organism> orgs) {
-        if (foodEaten > 1 && currentTime - lastEatTime <= reproductionThreshold) {
+        if (foodEaten >= 2 && currentTime - lastEatTime <= reproductionThreshold) {
             reproduce(orgs);
             foodEaten = 0;
         } else if (currentTime - lastEatTime > reproductionThreshold) {
@@ -136,12 +139,15 @@ class Prey extends Organism {
     }
 
     void reproduce(ArrayList<Organism> orgs) {
-        orgs.add(new Prey(position.x + random(-10, 10), position.y + random(-10, 10)));
+        orgs.add(new Prey(position.x + random(-10, 10), position.y + random(-10, 10), sprite));
     }
 
-    void display() {
-        fill(red, green, 0);
-        ellipse(position.x, position.y, radius * 2, radius * 2);
+    void display(){
+        image(sprite, position.x, position.y);
+        noFill(); // Disable filling
+        stroke(255, 0, 255); // Set ellipse border color to black
+        strokeWeight(1); // Set the thickness of the ellipse border
+        ellipse(position.x, position.y, detectionRadius, detectionRadius); // Draw an ellipse
     }
 
     boolean checkInLight(ArrayList<Organism> orgs) {
