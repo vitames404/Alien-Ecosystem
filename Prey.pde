@@ -123,6 +123,9 @@ class Prey extends Organism {
 
     void eat(Food food) {
         health = constrain(health + 20, 0, 100);
+        if(health > 20){
+            speed = 1;
+        }
         green = constrain(green + 40, 0, 255);
         red = constrain(red - 40, 0, 255);
         foodEaten++;
@@ -144,10 +147,6 @@ class Prey extends Organism {
 
     void display(){
         image(sprite, position.x, position.y);
-        noFill(); // Disable filling
-        stroke(255, 0, 255); // Set ellipse border color to black
-        strokeWeight(1); // Set the thickness of the ellipse border
-        ellipse(position.x, position.y, detectionRadius, detectionRadius); // Draw an ellipse
     }
 
     boolean checkInLight(ArrayList<Organism> orgs) {

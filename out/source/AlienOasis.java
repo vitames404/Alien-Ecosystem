@@ -29,9 +29,20 @@ long lastFoodSpawnTime = 0;
 long lastShroomSpawnTime = 0;
 
 long timer;
-
 PImage preySprite;
 PImage predatorSprite;
+
+// Global variables for message display
+String message = "";
+long messageDisplayTime = 0;
+int messageDuration = 2000; // Message display duration in milliseconds
+
+int predatorsCount;
+int preyCount;
+
+int predSpeed = 1;
+
+boolean showInstructions = false;
 
 public void setup() {
 
@@ -54,7 +65,7 @@ public void initializeEntities() {
         organisms.add(new Prey(random(width), random(height), preySprite));
     }
     for (int i = 0; i < 1; i++) {
-        organisms.add(new Predator(random(width), random(height), predatorSprite));
+        organisms.add(new Predator(random(width), random(height), predatorSprite, predSpeed));
     }
     for (int i = 0; i < initialShroom; i++) {
         organisms.add(new Shroom(random(width), random(height), random(50, 150)));
@@ -65,7 +76,114 @@ public void draw() {
     background(30);
     updateWorld();
     displayEntities();
+    displayMessage();
     checkIfFinished();
+    
+    if (showInstructions) {
+        displayInstructions();
+    } else {
+        displayMessage();
+    }
+
+    fill(255); // White text
+    textSize(16);
+    text("Number of preys: " + preyCount, 100, 20);
+    text("Number of predators: " + predatorsCount, 100, 40);
+}
+
+public void keyPressed() {
+    if (key == ESC) {
+        showInstructions = !showInstructions; // Toggle instructions display
+        key = 0; // Prevent default behavior of ESC key
+    } else if(millis() - 0 > 500){
+        switch (key) {
+            case '+':
+                foodSpawnRate -= 10;
+                if (foodSpawnRate < 10) foodSpawnRate = 10; // Prevent too fast spawning
+                message = "Increased Food Spawn Rate: " + foodSpawnRate;
+                break;
+
+            case '-':
+                foodSpawnRate += 10;
+                message = "Decreased Food Spawn Rate: " + foodSpawnRate;
+                break;
+
+            case 'j':
+                availableMinerals -= 10;
+                message = "Decreased minerals available | Shroom spawn rate: " + availableMinerals;
+                break;
+
+            case 'k':
+                availableMinerals += 10;
+                message = "Increased minerals available | Shroom spawn rate: " + availableMinerals;
+                break;
+
+            case 's':
+                message = "Predators speed increased!";
+                changePredatorSpeed(0.2f);
+                break;
+
+            case 'd':
+                message = "Predators speed decreased";
+                changePredatorSpeed(-0.2f);
+                break;
+
+            case 'e':
+                message = "Preys speed increased!";
+                changePreySpeed(0.2f);
+                break;
+
+            case 'r':
+                message = "Preys speed decreased";
+                changePreySpeed(-0.2f);
+                break;
+
+            default:
+                break;
+        }
+
+        messageDisplayTime = millis();
+    }
+}
+
+public void changePreySpeed(float amount){
+    for(int i = 0; i < organisms.size(); i++){
+    
+        Organism org = organisms.get(i);
+
+        if(org instanceof Prey){
+
+            Prey p = (Prey) org;
+
+            p.speed += amount;
+        
+        }
+    }
+}
+
+public void changePredatorSpeed(float amount){
+
+    for(int i = 0; i < organisms.size(); i++){
+    
+        Organism org = organisms.get(i);
+
+        if(org instanceof Predator){
+
+            Predator p = (Predator) org;
+
+            p.speed += 0.2f;
+
+        }
+    }   
+}
+
+public void displayMessage() {
+    if (millis() - messageDisplayTime < messageDuration) {
+        fill(255); // White text
+        textSize(16);
+        textAlign(CENTER);
+        text(message, width / 2, 20);
+    }
 }
 
 public void updateWorld() {
@@ -166,11 +284,11 @@ public void checkPredatorCollisions(Predator predator) {
         for (int i = 0; i < organisms.size(); i++) {
             Organism org = organisms.get(i);
             if (org instanceof Prey && checkCollision(org, predator)) {
-                if(predator.hunting && predator.targetPrey == org){
+                //if(predator.hunting && org == predator.targetPrey){
                     predator.eat();
                     organisms.remove(i--);
                     predator.targetPrey = null;
-                }
+                //}
             }
         }
     }
@@ -246,8 +364,8 @@ public void checkCollisionsWithFood(Prey p) {
 public void checkIfFinished() {
     long currentTime = millis();
 
-    int predatorsCount = 0;
-    int preyCount = 0;
+    predatorsCount = 0;
+    preyCount = 0;
 
     // Conta o número de predadores e presas na lista de organismos
     for (Organism org : organisms) {
@@ -263,6 +381,22 @@ public void checkIfFinished() {
         println(((currentTime - timer) / 1000) / 60);
         exit();
     }
+}
+
+public void displayInstructions() {
+    fill(255);
+    textSize(16);
+    textAlign(CENTER);
+    text("Instructions:\n" +
+         "ESC: Toggle this instruction view\n" +
+         "+   : Increase Food Spawn Rate by 10 (minimum rate: 10)\n" +
+         "-   : Decrease Food Spawn Rate by 10\n" +
+         "j   : Decrease available minerals by 10\n" +
+         "k   : Increase available minerals by 10\n" +
+         "s   : Increase predators' speed by 0.2 units\n" +
+         "d   : Decrease predators' speed by 0.2 units\n" +
+         "e   : Increase preys' speed by 0.2 units\n" +
+         "r   : Decrease preys' speed by 0.2 units", width / 2, height / 2);
 }
 class Food extends Organism{
 
@@ -306,7 +440,7 @@ class Predator extends Organism {
     int health = 100;
     Prey targetPrey = null;
     float detectionRadius = 150;
-    float speed = 1;
+    float speed;
     boolean pregnant = false;
 
     boolean reproducing = false;
@@ -325,8 +459,9 @@ class Predator extends Organism {
     int directionChangeInterval = 2000; // tempo em milissegundos para mudar de direção
     long lastDirectionChangeTime = 0; // para rastrear a última mudança de direção
 
-    Predator(float x, float y, PImage s) {
+    Predator(float x, float y, PImage s, float spd) {
         super(x, y, 20);
+        speed = spd;
         sprite = s;
     }
 
@@ -352,7 +487,6 @@ class Predator extends Organism {
         }
         else{
             if (targetPrey != null) {
-                hunting = true;
                 PVector directionToPrey = PVector.sub(targetPrey.position, position);
                 directionToPrey.normalize();
                 directionToPrey.mult(speed);
@@ -384,11 +518,6 @@ class Predator extends Organism {
     }
 
     public void display() {
-        // Draw detection area
-        noFill(); // Disable filling
-        stroke(255, 0, 0); // Set ellipse border color to red
-        strokeWeight(1); // Set the thickness of the ellipse border
-        ellipse(position.x, position.y, detectionRadius * 2, detectionRadius * 2);
 
         // Set fill color based on predator state
         if (pregnant) {
@@ -412,6 +541,7 @@ class Predator extends Organism {
         translate(position.x, position.y);
         rotate(angle); // Rotate the image to face the target direction
         imageMode(CENTER); // Set image mode to center
+        sprite.resize(0, 30);
         image(sprite, 0, 0); // Draw the image at the translated and rotated position
         popMatrix();
     }
@@ -431,12 +561,13 @@ class Predator extends Organism {
                 distance = PVector.dist(position, p.position);
                 if (distance < detectionRadius && distance < minDistance) {
                     currentPrey = p;
+                    hunting = true;
                     counter++;        
                 }
             }
         }
 
-        if(counter <= 2 && currentPrey != null){
+        if(counter <= 1 && currentPrey != null){
             minDistance = distance;
             targetPrey = currentPrey;
         }
@@ -463,7 +594,7 @@ class Predator extends Organism {
     }
 
     public void reproduce(ArrayList<Organism> orgs) {
-        orgs.add(new Predator(position.x + random(-10, 10), position.y + random(-10, 10), predatorSprite));
+        orgs.add(new Predator(position.x + random(-10, 10), position.y + random(-10, 10), predatorSprite, speed));
     }
 
     public PVector findClosestCorner(){
@@ -619,6 +750,9 @@ class Prey extends Organism {
 
     public void eat(Food food) {
         health = constrain(health + 20, 0, 100);
+        if(health > 20){
+            speed = 1;
+        }
         green = constrain(green + 40, 0, 255);
         red = constrain(red - 40, 0, 255);
         foodEaten++;
@@ -640,10 +774,6 @@ class Prey extends Organism {
 
     public void display(){
         image(sprite, position.x, position.y);
-        noFill(); // Disable filling
-        stroke(255, 0, 255); // Set ellipse border color to black
-        strokeWeight(1); // Set the thickness of the ellipse border
-        ellipse(position.x, position.y, detectionRadius, detectionRadius); // Draw an ellipse
     }
 
     public boolean checkInLight(ArrayList<Organism> orgs) {

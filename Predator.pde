@@ -4,7 +4,7 @@ class Predator extends Organism {
     int health = 100;
     Prey targetPrey = null;
     float detectionRadius = 150;
-    float speed = 1;
+    float speed;
     boolean pregnant = false;
 
     boolean reproducing = false;
@@ -23,8 +23,9 @@ class Predator extends Organism {
     int directionChangeInterval = 2000; // tempo em milissegundos para mudar de direção
     long lastDirectionChangeTime = 0; // para rastrear a última mudança de direção
 
-    Predator(float x, float y, PImage s) {
+    Predator(float x, float y, PImage s, float spd) {
         super(x, y, 20);
+        speed = spd;
         sprite = s;
     }
 
@@ -50,7 +51,6 @@ class Predator extends Organism {
         }
         else{
             if (targetPrey != null) {
-                hunting = true;
                 PVector directionToPrey = PVector.sub(targetPrey.position, position);
                 directionToPrey.normalize();
                 directionToPrey.mult(speed);
@@ -82,11 +82,6 @@ class Predator extends Organism {
     }
 
     void display() {
-        // Draw detection area
-        noFill(); // Disable filling
-        stroke(255, 0, 0); // Set ellipse border color to red
-        strokeWeight(1); // Set the thickness of the ellipse border
-        ellipse(position.x, position.y, detectionRadius * 2, detectionRadius * 2);
 
         // Set fill color based on predator state
         if (pregnant) {
@@ -110,6 +105,7 @@ class Predator extends Organism {
         translate(position.x, position.y);
         rotate(angle); // Rotate the image to face the target direction
         imageMode(CENTER); // Set image mode to center
+        sprite.resize(0, 30);
         image(sprite, 0, 0); // Draw the image at the translated and rotated position
         popMatrix();
     }
@@ -129,12 +125,13 @@ class Predator extends Organism {
                 distance = PVector.dist(position, p.position);
                 if (distance < detectionRadius && distance < minDistance) {
                     currentPrey = p;
+                    hunting = true;
                     counter++;        
                 }
             }
         }
 
-        if(counter <= 2 && currentPrey != null){
+        if(counter <= 1 && currentPrey != null){
             minDistance = distance;
             targetPrey = currentPrey;
         }
@@ -161,7 +158,7 @@ class Predator extends Organism {
     }
 
     void reproduce(ArrayList<Organism> orgs) {
-        orgs.add(new Predator(position.x + random(-10, 10), position.y + random(-10, 10), predatorSprite));
+        orgs.add(new Predator(position.x + random(-10, 10), position.y + random(-10, 10), predatorSprite, speed));
     }
 
     PVector findClosestCorner(){

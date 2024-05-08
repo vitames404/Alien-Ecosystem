@@ -12,9 +12,20 @@ long lastFoodSpawnTime = 0;
 long lastShroomSpawnTime = 0;
 
 long timer;
-
 PImage preySprite;
 PImage predatorSprite;
+
+// Global variables for message display
+String message = "";
+long messageDisplayTime = 0;
+int messageDuration = 2000; // Message display duration in milliseconds
+
+int predatorsCount;
+int preyCount;
+
+int predSpeed = 1;
+
+boolean showInstructions = false;
 
 void setup() {
 
@@ -37,7 +48,7 @@ void initializeEntities() {
         organisms.add(new Prey(random(width), random(height), preySprite));
     }
     for (int i = 0; i < 1; i++) {
-        organisms.add(new Predator(random(width), random(height), predatorSprite));
+        organisms.add(new Predator(random(width), random(height), predatorSprite, predSpeed));
     }
     for (int i = 0; i < initialShroom; i++) {
         organisms.add(new Shroom(random(width), random(height), random(50, 150)));
@@ -48,7 +59,114 @@ void draw() {
     background(30);
     updateWorld();
     displayEntities();
+    displayMessage();
     checkIfFinished();
+    
+    if (showInstructions) {
+        displayInstructions();
+    } else {
+        displayMessage();
+    }
+
+    fill(255); // White text
+    textSize(16);
+    text("Number of preys: " + preyCount, 100, 20);
+    text("Number of predators: " + predatorsCount, 100, 40);
+}
+
+void keyPressed() {
+    if (key == ESC) {
+        showInstructions = !showInstructions; // Toggle instructions display
+        key = 0; // Prevent default behavior of ESC key
+    } else if(millis() - 0 > 500){
+        switch (key) {
+            case '+':
+                foodSpawnRate -= 10;
+                if (foodSpawnRate < 10) foodSpawnRate = 10; // Prevent too fast spawning
+                message = "Increased Food Spawn Rate: " + foodSpawnRate;
+                break;
+
+            case '-':
+                foodSpawnRate += 10;
+                message = "Decreased Food Spawn Rate: " + foodSpawnRate;
+                break;
+
+            case 'j':
+                availableMinerals -= 10;
+                message = "Decreased minerals available | Shroom spawn rate: " + availableMinerals;
+                break;
+
+            case 'k':
+                availableMinerals += 10;
+                message = "Increased minerals available | Shroom spawn rate: " + availableMinerals;
+                break;
+
+            case 's':
+                message = "Predators speed increased!";
+                changePredatorSpeed(0.2);
+                break;
+
+            case 'd':
+                message = "Predators speed decreased";
+                changePredatorSpeed(-0.2);
+                break;
+
+            case 'e':
+                message = "Preys speed increased!";
+                changePreySpeed(0.2);
+                break;
+
+            case 'r':
+                message = "Preys speed decreased";
+                changePreySpeed(-0.2);
+                break;
+
+            default:
+                break;
+        }
+
+        messageDisplayTime = millis();
+    }
+}
+
+void changePreySpeed(float amount){
+    for(int i = 0; i < organisms.size(); i++){
+    
+        Organism org = organisms.get(i);
+
+        if(org instanceof Prey){
+
+            Prey p = (Prey) org;
+
+            p.speed += amount;
+        
+        }
+    }
+}
+
+void changePredatorSpeed(float amount){
+
+    for(int i = 0; i < organisms.size(); i++){
+    
+        Organism org = organisms.get(i);
+
+        if(org instanceof Predator){
+
+            Predator p = (Predator) org;
+
+            p.speed += 0.2;
+
+        }
+    }   
+}
+
+void displayMessage() {
+    if (millis() - messageDisplayTime < messageDuration) {
+        fill(255); // White text
+        textSize(16);
+        textAlign(CENTER);
+        text(message, width / 2, 20);
+    }
 }
 
 void updateWorld() {
@@ -149,11 +267,11 @@ void checkPredatorCollisions(Predator predator) {
         for (int i = 0; i < organisms.size(); i++) {
             Organism org = organisms.get(i);
             if (org instanceof Prey && checkCollision(org, predator)) {
-                if(predator.hunting && predator.targetPrey == org){
+                //if(predator.hunting && org == predator.targetPrey){
                     predator.eat();
                     organisms.remove(i--);
                     predator.targetPrey = null;
-                }
+                //}
             }
         }
     }
@@ -229,8 +347,8 @@ void checkCollisionsWithFood(Prey p) {
 void checkIfFinished() {
     long currentTime = millis();
 
-    int predatorsCount = 0;
-    int preyCount = 0;
+    predatorsCount = 0;
+    preyCount = 0;
 
     // Conta o número de predadores e presas na lista de organismos
     for (Organism org : organisms) {
@@ -246,4 +364,20 @@ void checkIfFinished() {
         println(((currentTime - timer) / 1000) / 60);
         exit();
     }
+}
+
+void displayInstructions() {
+    fill(255);
+    textSize(16);
+    textAlign(CENTER);
+    text("Instructions:\n" +
+         "ESC: Toggle this instruction view\n" +
+         "+   : Increase Food Spawn Rate by 10 (minimum rate: 10)\n" +
+         "-   : Decrease Food Spawn Rate by 10\n" +
+         "j   : Decrease available minerals by 10\n" +
+         "k   : Increase available minerals by 10\n" +
+         "s   : Increase predators' speed by 0.2 units\n" +
+         "d   : Decrease predators' speed by 0.2 units\n" +
+         "e   : Increase preys' speed by 0.2 units\n" +
+         "r   : Decrease preys' speed by 0.2 units", width / 2, height / 2);
 }
